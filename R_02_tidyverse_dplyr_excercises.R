@@ -84,3 +84,51 @@ data_iris %>%
   
   arrange(desc(big_cnt))
 
+
+
+###################################################
+### TIDYR1
+###################################################
+
+# Using tidyr package transform stocks table from:
+# - timestamps are in the columns
+# - indexes are in the rows
+# to dataframe where:
+# - indexes are in the columns
+# - timestamps are in the rows.
+# Then calculate mean value for each index.
+
+# Load data
+load('02_tidyverse_03d_tidyr_stocks.RData')
+
+colnames(stocks)
+
+# Instal & load package sjmisc to transpose data:
+install.packages('sjmisc')
+library(sjmisc)
+
+data_stocks <- stocks %>% rotate_df()
+colnames(data_stocks)
+
+# Convert first row to column names:
+names(data_stocks) <- data_stocks %>% slice(1) %>% unlist()
+# Remove 1st row
+data_stocks <- data_stocks %>% slice(-1)
+data_stocks %>% View()
+
+colnames(data_stocks)
+
+# Check data type in tibble > there are no numeric values
+as.tibble(data_stocks)
+
+data_stocks <- data_stocks %>%
+  # Convert values in columns to numbers:
+  transform(CAC = as.numeric(CAC), 
+            DAX = as.numeric(DAX),
+            FTSE = as.numeric(FTSE),
+            SMI = as.numeric(SMI)) %>%
+  # Calculate mean for each column:
+  summarise(mean_CAC = round(mean(CAC),2),
+            mean_DAX = round(mean(DAX),2),
+            mean_FTSE = round(mean(FTSE),2),
+            mean_SMI = round(mean(SMI),2))
