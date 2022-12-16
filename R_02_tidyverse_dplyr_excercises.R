@@ -132,3 +132,76 @@ data_stocks <- data_stocks %>%
             mean_DAX = round(mean(DAX),2),
             mean_FTSE = round(mean(FTSE),2),
             mean_SMI = round(mean(SMI),2))
+
+
+###################################################
+### DPLYR + TIDYR
+###################################################
+
+# Using who data set check if % of women with diagnosed tuberculosis
+# has changed after year 2000?
+
+?who
+
+library(stringr)
+
+who_clean <- who %>% pivot_longer(starts_with('new'), names_to = 'code', values_to = 'new_cases') %>%
+  # add diagnosis and gender column based on code:
+  mutate(
+    diagnosis = str_extract(code, '(rel|sn|sp|ep)'),
+    gender = str_extract(code, '(m|f)'),
+    # extract 2 to 4 digits at the end of the code column:
+    age = str_extract(code, '\\d{2,4}$'),
+    age = case_when(
+      age == '014' ~ '0-14',
+      age == '1524' ~ '15-24',
+      age == '2534' ~ '25-34',
+      age == '3544' ~ '35-44',
+      age == '4554' ~ '45-54',
+      age == '5564' ~ '55-64',
+      age == '65' ~ '65+'
+      ),
+    diagnosis = factor(diagnosis),
+    gender = factor(gender),
+    # ordered factor:
+    age = factor(age, ordered = TRUE, levels = c('0-14','15-24','25-34','35-44','45-54','55-64','65+'))
+    ) %>%
+  # replace NA values with 0:
+  mutate_all(~replace(., is.na(.), 0))
+
+who_clean %>%
+  mutate(after_2000 = year >2000,
+         after_2000 = case_when(
+            after_2000 == FALSE ~ 'before 2000',
+            after_2000 == TRUE ~ 'after 2000')
+         ) %>%
+  group_by(gender,after_2000) %>%
+  summarise(sum_of_cases = sum(new_cases)) %>%
+  ungroup() %>%
+  pivot_wider(values_from = 'sum_of_cases', names_from = 'gender') %>%
+  mutate(Females_ratio = f / (f+m)) %>%
+  rename(Females = f,
+          Males = m)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
