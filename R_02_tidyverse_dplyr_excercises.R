@@ -1,5 +1,58 @@
+library(tidyverse)
+
 ###################################################
-### DPLYR - 01
+### 01
+###################################################
+# Check your working folder path. Change the work path so that it refers to the Desktop.
+# List the files and folders in that location. Return to the folder containing the project.
+
+# current path:
+getwd()
+
+# set path to Desktop:
+setwd('C:/Users/User/Desktop')
+getwd()
+
+list.files()
+
+# set path back to initial:
+setwd('C:/Users/User/OneDrive/Edu/R/Podyplomowe R/R')
+list.files()
+getwd()
+
+
+###################################################
+### 02
+###################################################
+# From https://gist.githubusercontent.com/seankross/a412dfbd88b3db70b74b/raw/5f23f993cd87c283ce766e7ac6b329ee7cc2e1d1/mtcars.csv
+# read columns:
+#       model - as a string of characters
+#       mpg - as a floating point number
+#       cyl - as a floating point number
+#       hp - as an integer
+#       carb - as a string of characters
+# Skip the other columns. Then add column "cyl6" which is TRUE if cyl==6 and FALSE otherwise
+# Save the received tibble to a file.
+
+f = "https://gist.githubusercontent.com/seankross/a412dfbd88b3db70b74b/raw/5f23f993cd87c283ce766e7ac6b329ee7cc2e1d1/mtcars.csv"
+
+d = read_csv(f, col_types = cols_only(model = col_character(), 
+                                      mpg = col_double(), 
+                                      cyl = col_double(), 
+                                      hp = col_integer(), 
+                                      carb = col_character()))
+
+# For short files we can specify col types as string (when we know column position):
+d1 = read_csv(f, col_types = "cdd_i______c")
+d1
+
+d$cyl6 = (d$cyl == 6)
+d
+
+write_csv(d, "mtcars2.csv")
+
+###################################################
+### 03
 ###################################################
 
 # Calculate:
@@ -35,7 +88,7 @@ data01 %>%
 
 
 ###################################################
-### DPLYR - 02
+### 04
 ###################################################
 
 # Add flag columns (TRUE/FALSE) to the iris dataset:
@@ -46,48 +99,52 @@ data01 %>%
 #   - the total number of deviations of a given individual (i.e. how many of the above are TRUE)
 # Sort result descending by. total number of deviations.
 
-
-library(dplyr)
 ?iris
 
-data_iris <- as_tibble(iris)
-data_iris
-
-         
-data_iris %>%
+iris %>% tibble::as_tibble() %>%
+  
   group_by(Species) %>%
   
-  mutate(big_sl = case_when(
-          Sepal.Length > mean(Sepal.Length) + sd(Sepal.Length) ~ TRUE,
-          Sepal.Length <= mean(Sepal.Length) + sd(Sepal.Length) ~ FALSE
-          ),
-         
-         big_sw = case_when(
-          Sepal.Width > mean(Sepal.Width) + sd(Sepal.Width) ~ TRUE,
-          Sepal.Width <= mean(Sepal.Width) + sd(Sepal.Width) ~ FALSE
-          ),
-         
-         big_pl = case_when(
-           Petal.Length > mean(Petal.Length) + sd(Petal.Length) ~ TRUE,
-           Petal.Length <= mean(Petal.Length) + sd(Petal.Length) ~ FALSE
-          ),
-         
-         big_pw = case_when(
-           Petal.Width > mean(Petal.Width) + sd(Petal.Width) ~ TRUE,
-           Petal.Width <= mean(Petal.Width) + sd(Petal.Width) ~ FALSE
-          )
-        ) %>%
+  mutate(big_sl = (Sepal.Length > mean(Sepal.Length) + sd(Sepal.Length)),
+         big_sw = (Sepal.Width > mean(Sepal.Width) + sd(Sepal.Width)),
+         big_pl = (Petal.Length > mean(Petal.Length) + sd(Petal.Length)),
+         big_pw = (Petal.Width > mean(Petal.Width) + sd(Petal.Width)),
+         big_flower = big_pw + big_sl + big_pl + big_pw) %>%
   
-  rowwise() %>%
-  
-  mutate(big_cnt = sum(c(big_sl, big_sw, big_pl, big_pw))) %>%
-  
-  arrange(desc(big_cnt))
-
+  arrange(desc(big_flower))
 
 
 ###################################################
-### TIDYR1
+### 05
+###################################################
+# Check using the cars and owners tables:
+#       1. How many people own a red six- or four-cylinder car?
+#       2. Which car models do not have a single owner? (color doesn't matter)
+
+cars = mtcars %>%
+  tibble::rownames_to_column('car_model') %>%
+  tibble::as_tibble()
+
+set.seed(123)
+owners = tibble(model = sample(cars$car_model, size = 20, replace = T),
+                color = sample(c('black', 'white', 'red'), size = 20, replace = T),
+                owners_number = sample(1:5, size=20, replace=T))
+
+# 1
+left_join(cars, owners, by = c('car_model'= 'model')) %>%
+  replace_na(list(color = '-',  owners_number = 0)) %>%
+  filter((cyl == 6 | cyl == 4) &  grepl('red', color)) %>%
+  summarise(sum(owners_number))
+
+# 2
+left_join(cars, owners, by = c('car_model'= 'model')) %>%
+  replace_na(list(color = '-',  owners_number = 0)) %>%
+  filter(owners_number == 0) %>%
+  select(car_model)
+
+
+###################################################
+### 06
 ###################################################
 
 # Using tidyr package transform stocks table from:
@@ -100,42 +157,45 @@ data_iris %>%
 
 # Load data
 load('02_tidyverse_03d_tidyr_stocks.RData')
-
+stocks %>% View()
 colnames(stocks)
 
-# Instal & load package sjmisc to transpose data:
-install.packages('sjmisc')
-library(sjmisc)
+stocks %>%
+  pivot_longer(-index, names_to = 'timestamp', values_to = 'value') %>%
+  pivot_wider(names_from = 'index', values_from = 'value') %>%
+  summarise(
+    mean_cac  = mean(CAC),
+    mean_dax  = mean(DAX),
+    mean_ftse = mean(FTSE),
+    mean_smi  = mean(SMI)
+  )
 
-data_stocks <- stocks %>% rotate_df()
-colnames(data_stocks)
 
-# Convert first row to column names:
-names(data_stocks) <- data_stocks %>% slice(1) %>% unlist()
-# Remove 1st row
-data_stocks <- data_stocks %>% slice(-1)
-data_stocks %>% View()
+stocks %>%
+  pivot_longer(2:1861,
+               names_to = 'Index',
+               values_to = 'Index_value') %>% 
+  group_by(index) %>%
+  summarise(index1 = mean(Index_value)) %>% 
+  pivot_wider(names_from = 'index',
+              values_from = 'index1')
 
-colnames(data_stocks)
 
-# Check data type in tibble > there are no numeric values
-as.tibble(data_stocks)
+stocks %>%
+  pivot_longer(-index, names_to = 'timestamp', values_to = 'value') %>%
+  pivot_wider(names_from = 'index', values_from = 'value') %>%
+  summarise_at(2:5, mean)
 
-data_stocks <- data_stocks %>%
-  # Convert values in columns to numbers:
-  transform(CAC = as.numeric(CAC), 
-            DAX = as.numeric(DAX),
-            FTSE = as.numeric(FTSE),
-            SMI = as.numeric(SMI)) %>%
-  # Calculate mean for each column:
-  summarise(mean_CAC = round(mean(CAC),2),
-            mean_DAX = round(mean(DAX),2),
-            mean_FTSE = round(mean(FTSE),2),
-            mean_SMI = round(mean(SMI),2))
+
+stocks %>%
+  pivot_longer(-index, names_to = 'timestamp', values_to = 'value') %>%
+  pivot_wider(names_from = 'index', values_from = 'value') %>%
+  summarise(across(2:5, mean))
+
 
 
 ###################################################
-### DPLYR + TIDYR
+### 07
 ###################################################
 
 # Using who data set check if % of women with diagnosed tuberculosis
@@ -145,29 +205,30 @@ data_stocks <- data_stocks %>%
 
 library(stringr)
 
-who_clean <- who %>% pivot_longer(starts_with('new'), names_to = 'code', values_to = 'new_cases') %>%
-  # add diagnosis and gender column based on code:
-  mutate(
-    diagnosis = str_extract(code, '(rel|sn|sp|ep)'),
-    gender = str_extract(code, '(m|f)'),
-    # extract 2 to 4 digits at the end of the code column:
-    age = str_extract(code, '\\d{2,4}$'),
-    age = case_when(
-      age == '014' ~ '0-14',
-      age == '1524' ~ '15-24',
-      age == '2534' ~ '25-34',
-      age == '3544' ~ '35-44',
-      age == '4554' ~ '45-54',
-      age == '5564' ~ '55-64',
-      age == '65' ~ '65+'
-      ),
-    diagnosis = factor(diagnosis),
-    gender = factor(gender),
-    # ordered factor:
-    age = factor(age, ordered = TRUE, levels = c('0-14','15-24','25-34','35-44','45-54','55-64','65+'))
-    ) %>%
+who_clean <- who %>%
+  pivot_longer(starts_with('new'), names_to = 'code', values_to = 'new_cases') %>%
   # replace NA values with 0:
-  mutate_all(~replace(., is.na(.), 0))
+  mutate_all(~replace(., is.na(.), 0)) %>%
+  # add diagnosis and gender column based on code:
+  mutate(diagnosis = str_extract(code, '(rel|sn|sp|ep)'),
+         gender = str_extract(code, '(m|f)'),
+         # extract 2 to 4 digits at the end of the code column:
+         age = str_extract(code, '\\d{2,4}$'),
+         age = case_when(age == '014' ~ '0-14',
+                         age == '1524' ~ '15-24',
+                         age == '2534' ~ '25-34',
+                         age == '3544' ~ '35-44',
+                         age == '4554' ~ '45-54',
+                         age == '5564' ~ '55-64',
+                         age == '65' ~ '65+'),
+        diagnosis = factor(diagnosis),
+        gender = factor(gender),
+        # ordered factor:
+        age = factor(age,
+                     ordered = TRUE,
+                     levels = c('0-14','15-24','25-34','35-44','45-54','55-64','65+')
+                    )
+        ) 
 
 who_clean %>%
   mutate(after_2000 = year >2000,
@@ -182,26 +243,3 @@ who_clean %>%
   mutate(Females_ratio = f / (f+m)) %>%
   rename(Females = f,
           Males = m)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
