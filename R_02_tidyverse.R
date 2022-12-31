@@ -243,3 +243,30 @@ who_clean %>%
   mutate(Females_ratio = f / (f+m)) %>%
   rename(Females = f,
           Males = m)
+
+###################################################
+### 08
+###################################################
+# Using purrr and dplyr assign for each of cultures (from got_chars data set):
+# - the number of characters from it
+# - percentage of characters alive
+# - average number of aliases per character
+
+library(purrr)
+library(repurrrsive)
+
+got_chars %>%
+  map_df(function(x){
+    list(
+      culture = x$culture,
+      name = 1,
+      alive = x$alive,
+      alias = length(x$aliases)
+    )
+  }) %>% 
+  group_by(culture) %>%
+  summarise(sample = sum(name),
+            alive_rate = sum(alive)/sum(name),
+            mean_alias_cnt = mean(alias)) 
+
+
