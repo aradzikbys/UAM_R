@@ -74,3 +74,22 @@ getwd()
 htmlwidgets::saveWidget(cars_chart, 'cars_chart.html')
 
 
+###################################################
+### 03
+###################################################
+
+# Create violin plot showing distribution of petal length
+# among different iris species.
+# Add axis labels and box plot.
+
+library(plotly)
+
+?iris
+
+plot_ly(iris) %>%
+  add_trace(x = ~Species,
+            y = ~Petal.Length,
+            box = list(visible = TRUE),
+            type = 'violin') %>%
+  layout(xaxis = list(title = 'Species [cm]'),
+         yaxis = list(title = 'Petal length'))
