@@ -1,0 +1,333 @@
+---
+title: "Data Analysis UAM"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+## **Data analysis - basics**
+
+### Excercise 01: linear regression, models comparison *(data: cars)*
+
+Using the cars dataset, draw a scatterplot where the first variable is speed and the second is braking distance. Fit a regression line and plot it on the graph. Try to match the square and cubic function. Add them to the chart. Suggest a model based on its quality.
+
+##### 1.1 Check data set, assign to variable
+
+```{r, message = FALSE}
+head(cars)
+summary(cars)
+```
+
+```{r, message = FALSE}
+dataset01 <- cars
+```
+
+#### 1.2 Scatter plot with line models
+
+```{r, message = FALSE}
+# ggplot library:
+library(ggplot2)
+
+# graph:
+ggplot(data = dataset01, aes(x = speed, y = dist)) +
+  geom_point(aes(x = speed, y = dist)) +
+    # Linear model
+  geom_smooth(method = 'lm', se = FALSE,
+              aes(colour = '01. Linear')) +
+    # Square model
+  geom_smooth(method = 'lm', se = FALSE, formula = y ~ poly(x, 2),
+              aes(colour = '02. Square')) +
+    # Cubic model
+  geom_smooth(method = 'lm', se = FALSE, formula = y ~ poly(x, 3),
+              aes(colour = '03. Cubic')) +
+    # Axis labels
+  labs(x = 'Speed (mph)', y = 'Distance (ft)') +
+    # Legend
+  scale_color_manual(name = 'Model', values = c(2,3,4))
+
+```
+
+#### 1.3 Create linear models
+
+```{r, message = FALSE}
+# Linear model (Model 1A):
+model_1a = lm(formula = dist ~ speed, data = dataset01)
+
+# Square model (Model 1B):
+model_1b = lm(dist ~ poly(speed, 2, raw = TRUE), data = dataset01)
+
+# Cubic model (Model 1C):
+model_1c = lm(dist ~ poly(speed, 3, raw = TRUE), data = dataset01)
+
+```
+
+#### 1.4 Models summary and comparison
+
+**Multiple R-squared**: best result for model 1C (1A = 0.6511, 1B = 0.6673, 1C = 0.6732), but there is no significant difference between the models (we aim for at least 60%).
+
+**p-value**: best result for model 1A (1A= 1.49e-12, 1B = 5.852e-12, 1C = 3.074e-11). It's ok for all models (\<5%), but the less the better.
+
+```{r}
+summary(model_1a)
+summary(model_1b)
+summary(model_1c)
+```
+
+**MSE (Mean Squared Error)**: best for 1C (the less the better)
+
+```{r}
+(MSE.model_1a <- mean(resid(model_1a)^2))
+(MSE.model_1b <- mean(resid(model_1b)^2))
+(MSE.model_1c <- mean(resid(model_1c)^2))
+```
+
+Akaike chooses 1B, but differences between models are minor (\<2):
+
+```{r}
+AIC(model_1a, model_1b, model_1c)
+```
+
+Bayesian chooses 1A (Bayesian prefers simpler model):
+
+```{r}
+BIC(model_1a, model_1b, model_1c)
+```
+
+**PROPOSED MODEL:** Model 1A Simplest one and good enough comparing to square & cubic models.
+
+###  Excercise 02: linear regression, prediction, working with outliers *(data: manual update)*
+
+Make a correlation diagram and find a regression line for the house price and number of rooms data. With significance level = 5%, does the number of rooms have an impact on the price? What will be the price of the apartment two-room apartment according to the estimated model? Are the assumptions of the model fulfilled?
+
+#### 2.1 Create data set
+
+```{r, message = FALSE}
+price <- c(300, 250, 400, 550, 317, 389, 425, 289, 389, 559) 
+rooms <- c(3, 3, 4, 5, 4, 3, 6, 3, 4, 5)
+
+dataset02 <- data.frame(price,rooms)
+```
+
+#### 2.2 Scatter plot
+
+```{r, message = FALSE,}
+ggplot(data = dataset02, aes(x = rooms, y = price)) +
+  geom_point(data = dataset02, aes(x = rooms, y = price)) +
+  geom_smooth(method = 'lm', color = 2) +
+  labs(x = 'Number of rooms', y = "Price (k PLN)")
+
+```
+
+#### 2.3 Model summary
+
+**Residuals**: we aim at symmetrical residuals (difference between model and observed values) \>\> not bad, but there might be some outliers. Details can be checked with residuals model and histogram.
+
+**Adjusted R-squared**: 0.4846 (price of the room depends in 48% on number of rooms (not good enough, we aim for at least 0.6).
+
+**p-value**: 0.01521 (OK = less than 0.05, significance level)
+
+**Coefficient estimates**:
+
+-   **Intercept**: 0-rooms apartment would cost 94.4k PLN. Looking at current situation in estate market, that seems valid. :-)
+
+-   **Rooms**: with each extra room price will increase by 73.1k PLN.
+
+**Residual standard error**: on average, actual price deviates by 75.15k PLN from linear model.
+
+```{r, message = FALSE,}
+model_2a = lm(price ~ rooms, data = dataset02)
+summary(model_2a)
+
+```
+
+**Significance of Pearson's coeff.**: cor = 0.7361 (strong positive correlation)
+
+```{r, message = FALSE,}
+cor.test(~ price + rooms, data = dataset02) 
+
+```
+
+**Residuals histogram**: histogram suggests that the residuals are not normally distributed (right skewed) \>\> there are some outliers
+
+```{r, message = FALSE,}
+resid(model_2a)
+hist(resid(model_2a), col = 2)
+```
+
+#### 2.4 Predict price of 2-rooms apartment
+
+Linear regression function: y *[price]* = 73.1 *[coeff. rooms]* \* 2 *[no of rooms]* + 94.4 *[coeff. estimate]* (from model_2a summary)
+
+```{r, message=FALSE}
+# Create data set with known variable
+tworooms <- data.frame(rooms=c(2))
+
+# Use predict function using linear model:
+predict(model_2a,tworooms)
+
+```
+
+**ANSWER**: With significance level at 5%, number of rooms have impact on the price (also, there is strong positive correlation: 0.73). Price of 2 rooms apartment: 240.6 k PLN.
+
+#### 2.5 Additional analysis for outlier
+
+Let's check, which observation is outlier - based on scatter plot it might be apt. with 6 rooms.
+What are other symptoms of outliers in data set?
+
+**Constant variance**: points are not symmetrically distributed, there are potential outliers (observation #7?)
+
+```{r, message = FALSE,}
+plot(model_2a, 1, pch = 20) 
+```
+
+**Normality**: OK in our case - symmetrical
+
+```{r, message = FALSE,}
+plot(model_2a, 2, pch = 20) 
+```
+
+**Influential points**: obs. #7 highly influences the regression line
+
+```{r, message = FALSE,}
+plot(model_2a, 5, pch = 20) 
+```
+
+Divide data set to 2 separate data sets: observations w/o outlier + outlier (#7).
+
+```{r, message = FALSE,}
+dataset02A <- dataset02[-7,] # w/o outlier
+dataset02B <- dataset02[7,] # outlier
+
+ggplot(data=dataset02, aes(x = rooms, y = price))+
+  
+  geom_point(data=dataset02A, aes(x = rooms, y = price),
+             size = 2, colour = 1) +
+  geom_point(data=dataset02B, aes(x = rooms, y = price),
+             size = 2, colour = 2) +
+  
+  geom_smooth(data = dataset02A,
+              method = 'lm',
+              fullrange = TRUE,
+              se = FALSE,
+              aes(x = rooms,
+                  y = price,
+                  colour = 'Model w/o outlier',
+                  linetype = 'Model w/o outlier')) +
+  
+  geom_smooth(data = dataset02,
+              method = 'lm',
+              se = FALSE,
+              aes(x = rooms,
+                  y = price,
+                  colour = 'All data points',
+                  linetype = 'All data points')) +
+  
+  scale_color_manual(name = 'Model', values = c('darkgrey',1))+
+  scale_linetype_manual(name = 'Model', values = c(2,1)) +
+  
+  labs(x = 'Number of rooms', y = 'Price [k PLN]')
+
+```
+
+**New model summary**
+
+**Residuals**: more symmetrical distribution ( \>\> improvement)
+
+**Adjusted R-squared**: 0.7425 (vs 0.4846 in previous model \>\> improvement)
+
+**p-value**: 0.001741 (vs 0.01521 in previous model \>\> improvement)
+
+```{r, message = FALSE,}
+model_2b = lm(price ~ rooms, data = dataset02A)
+summary(model_2b)
+
+```
+
+**Significance of Pearson's coeff.**: cor = 0.88 (vs 0.7361)
+
+```{r, message = FALSE,}
+cor.test(~ price + rooms, data = dataset02A) 
+
+```
+
+**Residuals histogram**: residuals are normally distributed
+
+```{r, message = FALSE,}
+hist(resid(model_2b), col = 2)
+```
+
+**Constant variance**: points are rather symmetrically distributed, potential outliers: #5, #6
+
+```{r, message = FALSE,}
+plot(model_2b, 1, pch = 20) 
+```
+
+**Normality**: rather OK in our case - rather symmetrical, potential outliers: #5, #6
+
+```{r, message = FALSE,}
+plot(model_2b, 2, pch = 20) 
+```
+
+**Influential points**: observation #6 another potential outlier, but much better than in previous model
+
+```{r, message = FALSE,}
+plot(model_2b, 5, pch = 20) 
+```
+
+### Excercise 03 - linear regression, working with outliers *(data: emissions from the UsingR package)*
+
+In the emissions data set from the package UsingR (CO2 emissions vs. GDP level, 26 countries) there is at least one outlier. Draw a correlation diagram for variables GDP and CO2. Based on it, determine the outlier. 
+Accepting variable CO2 behind the dependent variable, find the regression line with an outlier and without it.
+How have the results changed? Add both lines to the graph.
+
+#### 3.1 Load library, check data set, assign to variable
+No missing values, 26 data points, 3 numeric variables (GDP, GDP perCapita and CO2 emmision)
+
+```{r, message = FALSE}
+library(UsingR)
+?emissions
+skimr::skim(emissions)
+dataset03 <- emissions
+```
+
+#### 3.2 Scatter plot with linear model
+```{r, message = FALSE}
+
+```
+
+### Excercise 04 - linear models criteria validation *(data: homeprice from the UsingR package)*
+
+The UsingR homeprice dataset contains information on homes sold in New Jersey in 2001. Did the number of toilets (half) affect price (sale)? Are the assumptions of the model met?
+
+### Excercise 05 - logistic model *(data: USPop from the carData package)*
+
+Match the classic model of population growth (logistic model: y = a / (1 + e ^ (b-x)/c)) with the USPop data from the carData package containing information about the US population from 1790 to 2000.Draw a fitted regression function. Are the assumptions of the model met?
+
+### Excercise 06 - Michaelis-Menten model *(data: manual update)*
+
+A skydiver jumps with a parachute from a hot air balloon. Below are his velocities [m/s] in successive moments of time [s], starting from 1s. Fit the Michaelis-Menten model to this data. 
+Draw a scatter plot with a fitted regression curve.
+What speed the jumper will reach in the 17th second of the flight?
+
+
+## **Data analysis - PCA**
+
+### Excercise 01 - loadings of components, ggbiplot *(data: painters from the MASS package)*
+
+Using the painters set (subjective assessments of painters) from the MASS package, perform a principal component analysis. Investigate the loadings of the first three principal components. Draw a scatter diagram for the first two principal components using different colors or symbols to distinguish schools of painting.
+
+
+### Excercise 02 - loadings of components, ggbiplot *(data: Cars93 from the MASS package)*
+
+Using categorical and continuous variables from the Cars93 dataset from the MASS package, perform principal component analysis. Compare (in separate charts):
+- American and other cars (Origin),
+- Car types (Type).
+
+## **Data analysis - classification**
+
+### Excercise 01 - classification - 1NN, LDA, QDA, NB, visualization of prediction using PCA *(data: Vehicles from the mlbench package)*
+
+## **Data analysis - cluster analysis**
+
+### Excercise 01 - number of clusters, hierarchical & non-hierarchical cluster analysis. Clusters visualization on dendrogram and PCA *(data: mtcars)*
