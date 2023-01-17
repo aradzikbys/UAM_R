@@ -15,8 +15,10 @@ head(iris)
 
 (iris_chart <- plot_ly(iris) %>%
     add_trace(
-      x = ~Sepal.Length, y = ~Sepal.Width,
-      type = 'scatter', mode = 'markers',
+      x = ~Sepal.Length,
+      y = ~Sepal.Width,
+      type = 'scatter',
+      mode = 'markers',
       color = ~factor(Species),
       size = ~(Petal.Length * Petal.Width),
       hoverinfo = 'text',
@@ -45,6 +47,9 @@ htmlwidgets::saveWidget(iris_chart, 'iris_chart.html')
 # Using the mtcars dataset, prepare a pie chart showing car count
 # of a given number of cylinders and type of engine.
 
+library(wesanderson)
+wes_palettes
+my_col <- wes_palette('Cavalcanti1', type = 'discrete', n = 5)
 
 ?mtcars
 
@@ -63,11 +68,14 @@ htmlwidgets::saveWidget(iris_chart, 'iris_chart.html')
     plot_ly() %>%
     add_trace(
       labels = ~engine,
+      marker = list(colors = my_col),
       values = ~n,
       type = 'pie',
       textinfo = 'label+percent',
       hoverinfo = 'text',
       text = ~paste(cars)))
+
+
 
 getwd()
 # setwd('C:/Users/User/OneDrive/Edu/R/Podyplomowe R/R')
